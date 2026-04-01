@@ -436,6 +436,11 @@ const PROP_TYPE_MAP = {
 // { athleteId: { pts: 24.5, reb: 8.5, ast: 6.5 } }
 let PROP_LINES = {};
 
+// Populated by fetchDefRankings() — keyed by team abbreviation
+// { 'MIA': { avgPtsAllowed: 117.8, rank: 12, total: 30, label: 'Mid D' } }
+// rank 1 = best defence (fewest pts allowed), 30 = worst
+let DEF_RANKS = {};
+
 function athleteIdFromRef(ref) {
   const m = (ref || '').match(/athletes\/(\d+)/);
   return m ? m[1] : null;
@@ -542,7 +547,7 @@ function calcL10Stats(games, scheduleMap) {
 // ═══════════════════════════════════════════════════════
 // CONFIDENCE ALGORITHM (0–100)
 // ═══════════════════════════════════════════════════════
-function calcConfidence(l10avg, seasonAvg, statGames, statType, avgMins, hitRateVsLine, l4VsLine) {
+function calcConfidence(l10avg, seasonAvg, statGames, statType, avgMins, hitRateVsLine, l4VsLine, oppDefRank, totalTeams) {
   let score = 35;
   const delta = l10avg - seasonAvg;
   const deltaPct = seasonAvg > 0 ? Math.abs(delta) / seasonAvg : 0;
@@ -582,10 +587,29 @@ function calcConfidence(l10avg, seasonAvg, statGames, statType, avgMins, hitRate
   else if (statType === 'rebounds') score += 5;
   else if (statType === 'assists')  score += 2;
 
-  // ④ Minutes floor — penalise players with low minutes (games may be blowout skewed)
+  // ④ Minutes floor
   if (avgMins < 22) score -= 15;
   else if (avgMins < 26) score -= 5;
-  else if (avgMins >= 32) score += 4; // Starter with real run
+  else if (avgMins >= 32) score += 4;
+
+  // ⑤ Opponent defensive rank — pts allowed ranking across all 30 teams
+  // rank 1 = hardest matchup (fewest pts allowed), rank 30 = easiest
+  if (oppDefRank != null) {
+    const n = totalTeams || 30;
+    const pct = oppDefRank / n; // low = tough defence, high = soft defence
+    if (statType === 'points') {
+      if (pct > 0.83)      score += 10; // bottom 5 — juicy matchup
+      else if (pct > 0.67) score += 6;
+      else if (pct > 0.50) score += 3;
+      else if (pct < 0.17) score -= 10; // top 5 — tough matchup
+      else if (pct < 0.33) score -= 6;
+      else if (pct < 0.50) score -= 2;
+    } else if (statType === 'rebounds') {
+      // Pace proxy: fast-paced teams (usually bad defenders) mean more possessions
+      if (pct > 0.83)      score += 4;
+      else if (pct < 0.17) score -= 4;
+    }
+  }
 
   return Math.min(97, Math.max(5, Math.round(score)));
 }
@@ -607,6 +631,9 @@ function buildProps(players) {
     const makeEntry = (statType, statLabel, l10Stat, sznAvg) => {
       if (l10Stat.avg <= 0) return null;
 
+      // Opponent defensive ranking
+      const defInfo = DEF_RANKS[p.oppTeam] || null;
+
       // Step 1: Resolve DK line (real from propBets or estimated from season avg)
       const statKeyMap = { points:'pts', rebounds:'reb', assists:'ast' };
       const statKey = statKeyMap[statType];
@@ -619,8 +646,8 @@ function buildProps(players) {
       const hitRate  = dkLineIsReal ? vals.filter(v => v > dkLine).length : null;
       const l4Streak = dkLineIsReal ? vals.slice(-4).filter(v => v > dkLine).length : null;
 
-      // Step 3: Confidence — passes hit rate and L4 as named args
-      const conf = calcConfidence(l10Stat.avg, sznAvg, l10Stat.games, statType, avgMins, hitRate, l4Streak);
+      // Step 3: Confidence — passes hit rate, L4, and def rank
+      const conf = calcConfidence(l10Stat.avg, sznAvg, l10Stat.games, statType, avgMins, hitRate, l4Streak, defInfo?.rank, defInfo?.total || 30);
 
       const delta  = l10Stat.avg - sznAvg;
       const vsLine = l10Stat.avg - dkLine;
@@ -638,9 +665,11 @@ function buildProps(players) {
         delta,
         dkLine,        // DraftKings prop line (real if available, estimated otherwise)
         dkLineIsReal,  // true = live from DK, false = estimated from season avg
-        vsLine,        // L10 avg minus the DK line (positive = beats line)
-        hitRate,       // games beating DK line out of 10 (null if estimated line)
-        l4Streak,      // games beating DK line in last 4 (null if estimated line)
+        vsLine,
+        hitRate,
+        l4Streak,
+        defRank: defInfo,   // {rank,avgPtsAllowed,label,total} for opponent
+        oppTeam: p.oppTeam, // opponent abbreviation
         hi: l10Stat.hi,
         lo: l10Stat.lo,
         gameLog: l10Stat.games, // [{val, date, opp}] — full objects for expand row
@@ -656,10 +685,10 @@ function buildProps(players) {
     const rebEntry = makeEntry('rebounds', 'REB', reb, sznReb);
     const astEntry = makeEntry('assists',  'AST', ast, sznAst);
 
-    // Add best stat only per player for parlay (avoid duplication)
     const entries = [ptsEntry, rebEntry, astEntry].filter(Boolean);
     entries.sort((a,b) => b.confidence - a.confidence);
-    if (entries.length) entries[0].bestForParlay = true;
+    // All qualified props are eligible for the parlay — no per-player limit
+    entries.forEach(e => { if (e.qualified) e.bestForParlay = true; });
 
     props.push(...entries);
   }
@@ -704,7 +733,7 @@ function renderLock(prop) {
 
   $('lp-hi').textContent   = prop.hi;
   $('lp-lo').textContent   = prop.lo;
-  $('lock-matchup').textContent   = prop.matchup;
+  $('lock-matchup').textContent   = prop.matchup + (prop.defRank ? ` · ${prop.defRank.label} (#${prop.defRank.rank})` : '');
   $('lock-conf-text').textContent = `Confidence: ${prop.confidence}/100`;
 
   const badge = $('lock-badge');
@@ -713,21 +742,14 @@ function renderLock(prop) {
 }
 
 function renderParlay(props) {
-  const parlay = [];
-  const seen = new Set();
-  for (const p of props) {
-    if (p.bestForParlay && p.qualified && !seen.has(p.playerId) && parlay.length < 8) {
-      seen.add(p.playerId);
-      parlay.push(p);
-    }
-  }
-  // Pad to 3 if not enough qualified
-  for (const p of props) {
-    if (!seen.has(p.playerId) && parlay.length < 3) {
-      seen.add(p.playerId);
-      parlay.push(p);
-    }
-  }
+  // Take top 8 qualified props ranked purely by confidence.
+  // Multiple props from the same player are allowed if they score highest.
+  const qualified = props.filter(p => p.qualified).slice(0, 8);
+  // Pad to 3 with best non-qualified if needed
+  const parlay = qualified.length >= 3 ? qualified : [
+    ...qualified,
+    ...props.filter(p => !p.qualified).slice(0, 3 - qualified.length)
+  ];
 
   $('parlay-title').textContent = `Today's Best ${parlay.length}-Leg Parlay`;
   $('parlay-badge').textContent = `${parlay.length} legs · pure form`;
@@ -744,7 +766,7 @@ function renderParlay(props) {
     div.innerHTML = `
       <span class="leg-n">${pad2(i+1)}</span>
       <div class="leg-info">
-        <div class="leg-player">${p.player}</div>
+        <div class="leg-player">${p.player} <span style="font-size:10px;color:var(--gold);font-weight:400">${p.statLabel}</span></div>
         <div class="leg-team">${p.team} · ${p.matchup}</div>
       </div>
       <div class="leg-pick">
@@ -814,8 +836,8 @@ function renderTable(props) {
     tr.innerHTML = `
       <td>
         ${inParlay ? '<span class="dot"></span>' : ''}
-        <button class="td-name-btn" onclick="toggleGameLog('${rowId}', this)">
-          <span class="expand-icon">▶</span>${p.player}
+        <button class="td-name-btn" onclick="toggleGameLog('${rowId}', this)" title="${p.defRank ? 'Opponent: ' + (p.oppTeam||'') + ' — ' + p.defRank.label + ' (#' + p.defRank.rank + '/30, ' + p.defRank.avgPtsAllowed + ' pts allowed/gm)' : ''}">
+          <span class="expand-icon">▶</span>${p.player}${p.defRank ? '<span style="font-size:9px;margin-left:5px;padding:1px 5px;border-radius:2px;background:' + (p.defRank.rank<=10?'rgba(224,92,92,0.15)':p.defRank.rank>=21?'rgba(76,175,125,0.15)':'rgba(255,255,255,0.04)') + ';color:' + (p.defRank.rank<=10?'var(--red)':p.defRank.rank>=21?'var(--green)':'var(--text-dim)') + '">' + p.defRank.label + '</span>' : ''}
         </button>
       </td>
       <td><span class="td-dim">${p.team}</span></td>
@@ -888,7 +910,7 @@ function renderTable(props) {
     expandRow.innerHTML = `
       <td colspan="${colCount}">
         <div class="game-log-inner">
-          <div class="game-log-title">${p.player} — Last ${gameLog.length} Games · ${p.statLabel} &nbsp;·&nbsp; Season avg: ${fmt1(sznAvg)} &nbsp;·&nbsp; DK line: <span style="color:${p.dkLineIsReal ? 'var(--green)' : 'var(--gold)'}">${fmt1(p.dkLine)}${p.dkLineIsReal ? ' ✓ live' : '* est.'}</span></div>
+          <div class="game-log-title">${p.player} — Last ${gameLog.length} Games · ${p.statLabel} &nbsp;·&nbsp; Szn avg: ${fmt1(sznAvg)} &nbsp;·&nbsp; DK: ${fmt1(p.dkLine)}${p.dkLineIsReal ? ' ✓' : '*'} &nbsp;·&nbsp; vs ${p.oppTeam||'?'}: <span style="color:${p.defRank ? (p.defRank.rank<=10?'var(--red)':p.defRank.rank>=21?'var(--green)':'var(--text-muted)') : 'var(--text-dim)'}">${p.defRank ? p.defRank.label + ' (#' + p.defRank.rank + ', ' + p.defRank.avgPtsAllowed + ' pts/gm)' : 'def data loading...'}</span></div>
           <table class="game-log-table">
             <thead><tr>
               <th style="text-align:left">Date</th>
@@ -904,7 +926,7 @@ function renderTable(props) {
                 <td colspan="2">L10 Average</td>
                 <td class="gl-avg">${fmt1(p.l10avg)}</td>
                 <td class="${p.delta >= 0 ? 'gl-above' : 'gl-below'}">${fmtDelta(p.delta)} vs szn</td>
-                <td colspan="2" class="${dkReal ? (p.hitRate >= 6 ? 'gl-above' : 'gl-below') : ''}">${dkReal ? `${p.hitRate}/10 beat line &nbsp;·&nbsp; L4: ${p.l4Streak}/4` : '— estimated line'}</td>
+                <td colspan="2" class="${dkReal ? (p.hitRate >= 6 ? 'gl-above' : 'gl-below') : ''}">${dkReal ? p.hitRate + '/10 beat line · L4: ' + p.l4Streak + '/4' : '— estimated line'}</td>
               </tr>
             </tbody>
           </table>
@@ -940,7 +962,8 @@ const FAQ = [
   { q: 'Where does the data come from?', a: '<strong>Game data</strong> (teams, times, venues) comes from ESPN\'s public scoreboard API. <strong>Player game logs</strong> — the per-game PTS/REB/AST/BLK/STL for each player — come from ESPN\'s athlete gamelog endpoint (<span class="mono">site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{id}/gamelog</span>). All data is fetched live each time you load or refresh.' },
   { q: 'Why are some players missing?', a: 'The site pulls the <strong>statistical leaders</strong> from each team in today\'s games — the top scorer, rebounder, and assist man per team. Role players are not included. Also, players with fewer than ~7 games played in the L10 period (due to injury, suspension, etc.) may have thinner data.' },
   { q: 'How is the parlay built?', a: 'The parlay takes the <strong>highest-confidence pick per player</strong> (max one prop per player to avoid correlation risk), requires a confidence score of 68+, requires 22+ avg minutes in L10, and selects up to 8 legs. The lock of the day is always the single highest-confidence individual pick.' },
-  { q: 'What would make picks more accurate?', a: 'The single biggest gap is <strong>opponent defensive matchup data</strong> — knowing that a team allows the 2nd-most points to shooting guards dramatically refines the pick. Other improvements: back-to-back game flags, home/away splits, injury report integration, and referee foul-rate data. All require a paid API like BallDontLie or SportsDataIO.' },
+  { q: 'How does the opponent defensive rating work?', a: 'All 30 NBA teams are ranked by <strong>average points allowed per game</strong>, computed live from their season schedule. A player facing a bottom-5 defence gets up to a <strong>+10 confidence bonus</strong>; top-5 defence gets −10. Labels: <strong>Elite D</strong> (rank 1–6), Good D (7–12), Mid D (13–18), Weak D (19–24), <strong>Poor D</strong> (25–30). Shown as a coloured badge next to each player name.' },
+  { q: 'What would make picks more accurate?', a: 'Opponent defensive rankings are now live. Further improvements: back-to-back fatigue flags, home/away splits, and injury report integration.' },
   { q: 'Should I bet the full parlay?', a: 'The parlay is a <strong>tool for analysis</strong>, not a prescription. Multi-leg parlays compound risk significantly — even if each leg has a 70% edge, a 6-leg parlay wins only ~12% of the time. Sharp bettors typically prefer single-leg props with clear L10 edges. Use the parlay as inspiration, not a ticket.' },
   { q: 'How often should I refresh?', a: 'Refresh <strong>morning of game day</strong> to get the freshest L10 data and confirm the slate. Player game logs update after each game. The site fetches live each refresh — there\'s no stale cache.' },
 ];
@@ -996,11 +1019,11 @@ async function init() {
 
   $('st-games').textContent = events.length || (espnOk ? '0' : '—');
 
-  // Fetch real DraftKings prop lines from ESPN Core propBets endpoint (Provider 100)
-  // Run in background — will populate PROP_LINES by athlete ID
+  // Fetch prop lines AND defensive rankings in parallel background tasks
   if (events.length) {
     fetchAllPropLines(events).catch(e => console.warn('propLines failed:', e));
   }
+  fetchDefRankings().catch(e => console.warn('defRanks failed:', e));
 
   if (!espnOk) {
     const b = $('top-banner'); b.className='banner';
@@ -1038,6 +1061,8 @@ async function init() {
     const matchup = ev.shortName;
     comps.competitors.forEach(comp => {
       const team = comp.team.abbreviation;
+      const oppComp = comps.competitors.find(c => c.team.id !== comp.team.id);
+      const oppTeam = oppComp?.team?.abbreviation || null;
       const leaders = comp.leaders || [];
       const sznMap = {};
       // Season averages from leader displayValues
@@ -1049,7 +1074,7 @@ async function init() {
         if (!l) return;
         const id = l.athlete.id;
         if (!playerMap.has(id)) {
-          playerMap.set(id, { id, name: l.athlete.fullName, team, teamId: comp.team.id, matchup, seasonAvg: {} });
+          playerMap.set(id, { id, name: l.athlete.fullName, team, teamId: comp.team.id, oppTeam, matchup, seasonAvg: {} });
         }
       });
 
@@ -1119,7 +1144,7 @@ async function init() {
 
   // Build and render props
   allProps = buildProps(enriched);
-  $('st-qualified').textContent = allProps.filter(p=>p.qualified&&p.bestForParlay).length;
+  $('st-qualified').textContent = allProps.filter(p=>p.qualified).length;
 
   const lock = allProps[0];
   if (lock) renderLock(lock);
@@ -1172,6 +1197,48 @@ async function fetchAllPropLines(events) {
   const total = Object.keys(PROP_LINES).length;
   console.log(`DK prop lines loaded for ${total} players`);
   return total;
+}
+
+// ═══════════════════════════════════════════════════════
+// OPPONENT DEFENSIVE RANKINGS
+// Fetch all 30 team schedules in parallel (~1 sec).
+// Compute avg points allowed per game from completed game scores.
+// Rank 1 = best defence, 30 = worst. Free, no extra API key needed.
+// ═══════════════════════════════════════════════════════
+async function fetchDefRankings() {
+  try {
+    const teamsData = await espnFetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams?limit=32');
+    const teams = teamsData.sports[0].leagues[0].teams.map(t => ({
+      id: t.team.id, abbr: t.team.abbreviation,
+    }));
+
+    const results = await Promise.all(teams.map(async team => {
+      try {
+        const sched = await espnFetch(
+          `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${team.id}/schedule?season=2026`
+        );
+        const played = (sched.events || []).filter(e => e.competitions?.[0]?.status?.type?.completed);
+        if (!played.length) return { ...team, avgPtsAllowed: null };
+        let total = 0;
+        for (const ev of played) {
+          const opp = ev.competitions[0].competitors.find(c => c.team.id !== team.id);
+          total += parseFloat(opp?.score?.value ?? opp?.score ?? 0);
+        }
+        return { ...team, avgPtsAllowed: total / played.length };
+      } catch(e) { return { ...team, avgPtsAllowed: null }; }
+    }));
+
+    const valid = results.filter(t => t.avgPtsAllowed != null);
+    valid.sort((a, b) => a.avgPtsAllowed - b.avgPtsAllowed); // best D first
+
+    DEF_RANKS = {};
+    valid.forEach((team, i) => {
+      const rank = i + 1;
+      const label = rank <= 6 ? 'Elite D' : rank <= 12 ? 'Good D' : rank <= 18 ? 'Mid D' : rank <= 24 ? 'Weak D' : 'Poor D';
+      DEF_RANKS[team.abbr] = { avgPtsAllowed: parseFloat(team.avgPtsAllowed.toFixed(1)), rank, total: valid.length, label };
+    });
+    console.log('DEF_RANKS loaded:', Object.keys(DEF_RANKS).length, 'teams');
+  } catch(e) { console.warn('fetchDefRankings failed:', e.message); }
 }
 
 // Boot
