@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Magic 8 Ball — presented by mot.inc</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0c;--bg2:#111115;--bg3:#161619;--bg4:#1c1c20;
+  --gold:#c9a96e;--gold-light:#e2c898;--gold-dim:#7a5f35;
+  --gold-bg:rgba(201,169,110,0.06);--gold-border:rgba(201,169,110,0.2);
+  --text:#e8e6e0;--text-muted:rgba(232,230,224,0.45);--text-dim:rgba(232,230,224,0.22);
+  --border:rgba(255,255,255,0.07);--border-strong:rgba(255,255,255,0.13);
+  --green:#4caf7d;--green-bg:rgba(76,175,125,0.1);
+  --red:#e05c5c;--red-bg:rgba(224,92,92,0.1);
+  --blue:#5b9cf6;--blue-bg:rgba(91,156,246,0.1);
+  --r:8px;--rl:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;line-height:1.5;min-height:100vh;overflow-x:hidden}
+body::after{content:'';position:fixed;top:-200px;left:50%;transform:translateX(-50%);width:700px;height:400px;background:radial-gradient(ellipse,rgba(201,169,110,0.035) 0%,transparent 70%);pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:0 24px 80px}
+
+/* ── HEADER ── */
+header{display:flex;align-items:center;justify-content:space-between;padding:28px 0 22px;border-bottom:.5px solid var(--border);margin-bottom:32px}
+.h-left{display:flex;flex-direction:column;gap:3px}
+.site-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:900;letter-spacing:-.02em;line-height:1}
+.site-title em{color:var(--gold);font-style:normal}
+.site-presents{font-size:10px;color:var(--gold-dim);letter-spacing:.22em;text-transform:uppercase;font-weight:500;margin-bottom:2px}
+.site-sub{font-size:10px;color:var(--text-dim);letter-spacing:.18em;text-transform:uppercase}
+.h-right{display:flex;align-items:center;gap:12px}
+.date-pill{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);background:var(--gold-bg);border:.5px solid var(--gold-border);padding:5px 12px;border-radius:3px;letter-spacing:.06em}
+.live-pill{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
+.live-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.btn{background:transparent;border:.5px solid var(--border-strong);color:var(--text-muted);padding:6px 14px;border-radius:var(--r);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn:hover{border-color:var(--gold-border);color:var(--gold)}
+.btn svg{transition:transform .4s}
+.btn:hover svg{transform:rotate(180deg)}
+
+/* ── LOADING ── */
+#loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 0;gap:20px}
+.ball-spin{width:72px;height:72px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#2a2a3a,#07070e);border:1.5px solid rgba(201,169,110,0.3);position:relative;animation:float 3s ease-in-out infinite;box-shadow:0 0 40px rgba(201,169,110,0.08)}
+.ball-spin::before{content:'8';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--gold)}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.load-text{font-size:13px;color:var(--text-muted);letter-spacing:.1em}
+.load-sub{font-size:11px;color:var(--text-dim)}
+#main{display:none}
+
+/* ── BANNER ── */
+.banner{background:var(--gold-bg);border:.5px solid var(--gold-border);border-radius:6px;padding:9px 16px;font-size:11px;color:var(--gold);margin-bottom:22px}
+
+/* ── HERO GRID ── */
+.hero-grid{display:grid;grid-template-columns:1fr 88px 1fr;gap:20px;align-items:start;margin-bottom:28px}
+
+/* lock card */
+.lock-card{background:var(--bg2);border:.5px solid var(--gold-border);border-radius:var(--rl);overflow:hidden;position:relative}
+.lock-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:13px 17px 10px;border-bottom:.5px solid var(--border)}
+.section-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.conf-badge{font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border-radius:3px;font-weight:500}
+.conf-hi{background:rgba(76,175,125,0.15);color:var(--green);border:.5px solid rgba(76,175,125,0.3)}
+.conf-md{background:rgba(201,169,110,0.12);color:var(--gold);border:.5px solid var(--gold-border)}
+.conf-lo{background:rgba(224,92,92,0.1);color:var(--red);border:.5px solid rgba(224,92,92,0.3)}
+.lock-body{padding:16px 17px}
+.lock-name{font-family:'Playfair Display',serif;font-size:23px;font-weight:700;line-height:1.1;margin-bottom:3px}
+.lock-meta{font-size:11px;color:var(--text-muted);margin-bottom:14px}
+.lock-stat-row{display:flex;align-items:baseline;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.lock-stat-label{font-size:13px;color:var(--text-muted)}
+.lock-stat-val{font-family:'Playfair Display',serif;font-size:34px;font-weight:900;color:var(--gold-light);line-height:1}
+.lock-trend{font-size:13px;font-weight:600;padding:3px 10px;border-radius:3px}
+.trend-up{color:var(--green);background:var(--green-bg)}
+.trend-down{color:var(--red);background:var(--red-bg)}
+.trend-flat{color:var(--text-muted);background:var(--bg3)}
+.stat-pills{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;border-top:.5px solid var(--border);padding-top:14px}
+.pill{background:var(--bg3);border-radius:var(--r);padding:9px 10px;display:flex;flex-direction:column;gap:3px}
+.pill-label{font-size:9px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase}
+.pill-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}
+.pv-gold{color:var(--gold)}
+.pv-green{color:var(--green)}
+.pv-red{color:var(--red)}
+.pv-blue{color:var(--blue)}
+.lock-foot{display:flex;align-items:center;justify-content:space-between;padding:9px 17px;background:var(--bg3);border-top:.5px solid var(--border);font-size:10px;color:var(--text-dim)}
+.lock-foot span{color:var(--gold);font-family:'DM Mono',monospace;font-size:11px}
+
+/* center 8-ball */
+.c-ball{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px 0}
+.eight-ball{width:74px;height:74px;border-radius:50%;background:radial-gradient(circle at 38% 38%,#2c2c3e,#07070e);border:1.5px solid rgba(201,169,110,0.22);display:flex;align-items:center;justify-content:center;box-shadow:0 0 36px rgba(201,169,110,0.07),inset 0 1px 0 rgba(255,255,255,0.04);animation:float 4s ease-in-out infinite}
+.ball-inner{width:36px;height:36px;border-radius:50%;background:var(--bg);border:1px solid rgba(201,169,110,0.15);display:flex;align-items:center;justify-content:center}
+.ball-n{font-family:'Playfair Display',serif;font-size:20px;font-weight:900;color:var(--gold);line-height:1}
+.ball-tag{font-size:9px;color:var(--text-dim);letter-spacing:.14em;text-transform:uppercase;text-align:center}
+
+/* slate card */
+.slate-card{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);padding:16px 17px}
+.slate-nums{display:flex;justify-content:space-around;margin:14px 0}
+.slate-num-item{display:flex;flex-direction:column;align-items:center;gap:3px}
+.slate-num{font-family:'Playfair Display',serif;font-size:30px;font-weight:700;line-height:1}
+.sn-gold{color:var(--gold)}
+.sn-green{color:var(--green)}
+.sn-blue{color:var(--blue)}
+.slate-lbl{font-size:10px;color:var(--text-dim);letter-spacing:.08em}
+.algo-desc{font-size:10px;color:var(--text-dim);line-height:1.65;border-top:.5px solid var(--border);padding-top:12px}
+
+/* ── PARLAY SECTION ── */
+.parlay-wrap{background:var(--bg2);border:.5px solid var(--gold-border);border-radius:var(--rl);overflow:hidden;margin-bottom:26px;position:relative}
+.parlay-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.parlay-head{display:flex;align-items:center;justify-content:space-between;padding:15px 22px;border-bottom:.5px solid var(--border)}
+.parlay-title{font-family:'Playfair Display',serif;font-size:16px;font-weight:700}
+.parlay-sub{font-size:11px;color:var(--text-muted);margin-top:2px}
+.parlay-badge{background:var(--gold-bg);border:.5px solid var(--gold-border);border-radius:3px;padding:4px 12px;font-size:11px;color:var(--gold);font-family:'DM Mono',monospace}
+.parlay-legs{padding:4px 0}
+.p-leg{display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:.5px solid var(--border);transition:background .15s}
+.p-leg:last-child{border-bottom:none}
+.p-leg:hover{background:rgba(255,255,255,0.018)}
+.leg-n{font-family:'DM Mono',monospace;font-size:10px;color:var(--gold-dim);width:18px;flex-shrink:0}
+.leg-info{min-width:160px}
+.leg-player{font-size:13px;font-weight:500}
+.leg-team{font-size:11px;color:var(--text-muted)}
+.leg-pick{flex:1;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.leg-stat-lbl{font-size:11px;color:var(--text-muted)}
+.leg-avg{font-family:'DM Mono',monospace;font-size:14px;font-weight:500}
+.leg-arrow{font-size:12px;font-weight:700}
+.la-up{color:var(--green)}
+.la-down{color:var(--red)}
+.la-flat{color:var(--text-muted)}
+.leg-right{display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:130px}
+.leg-conf-score{font-family:'DM Mono',monospace;font-size:12px;color:var(--gold)}
+.leg-sub{font-size:10px;color:var(--text-dim)}
+.loading-leg{padding:20px 22px;text-align:center;font-size:12px;color:var(--text-muted)}
+.spinner{display:inline-block;width:10px;height:10px;border:1.5px solid rgba(201,169,110,0.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── GAMES ── */
+.games-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.game-card{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);overflow:hidden;transition:border-color .2s}
+.game-card:hover{border-color:var(--border-strong)}
+.gc-head{display:flex;align-items:center;justify-content:space-between;padding:8px 13px;border-bottom:.5px solid var(--border);font-size:10px;color:var(--text-dim)}
+.gc-live{color:var(--green);font-weight:600}
+.gc-body{padding:11px 13px;display:flex;flex-direction:column;gap:5px}
+.gc-team{display:flex;align-items:center;justify-content:space-between}
+.gc-name{font-size:13px;font-weight:500}
+.gc-record{font-size:10px;color:var(--text-dim)}
+.gc-div{height:.5px;background:var(--border);margin:2px 0;position:relative}
+.gc-div::after{content:'@';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:8px;color:var(--text-dim);background:var(--bg2);padding:0 5px}
+.gc-foot{display:flex;align-items:center;justify-content:space-between;padding:7px 13px;background:var(--bg3);border-top:.5px solid var(--border);font-size:10px;color:var(--text-dim)}
+
+/* ── PROPS TABLE ── */
+.props-table-wrap{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);overflow:hidden;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:720px}
+thead th{padding:10px 13px;text-align:left;font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:var(--text-dim);font-weight:600;background:var(--bg3);border-bottom:.5px solid var(--border);white-space:nowrap}
+th.r,td.r{text-align:right}
+tbody tr{border-bottom:.5px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:rgba(255,255,255,0.018)}
+tbody td{padding:10px 13px;font-size:12px;vertical-align:middle}
+.td-name{font-weight:500;font-size:13px}
+.td-dim{color:var(--text-muted);font-size:11px}
+.td-mono{font-family:'DM Mono',monospace;font-weight:500}
+.td-trend{font-size:11px;font-weight:600}
+.tru{color:var(--green)}
+.trd{color:var(--red)}
+.trf{color:var(--text-muted)}
+.conf-num{font-family:'DM Mono',monospace;font-size:12px;font-weight:500}
+.rec-badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:3px;letter-spacing:.04em;white-space:nowrap}
+.rb-over{background:var(--green-bg);color:var(--green)}
+.rb-under{background:var(--red-bg);color:var(--red)}
+.rb-watch{background:var(--blue-bg);color:var(--blue)}
+.rb-skip{background:var(--bg3);color:var(--text-dim)}
+.dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--gold);margin-right:6px;vertical-align:middle}
+
+/* ── EXPANDABLE GAME LOG ── */
+.td-name-btn{background:none;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;padding:0;text-align:left;display:flex;align-items:center;gap:6px;transition:color .15s}
+.td-name-btn:hover{color:var(--gold)}
+.td-name-btn .expand-icon{font-size:9px;color:var(--gold-dim);transition:transform .22s;display:inline-block}
+.row-open .td-name-btn .expand-icon{transform:rotate(90deg)}
+.game-log-row td{padding:0!important;border-bottom:.5px solid var(--border)}
+.game-log-inner{padding:14px 16px 16px;background:var(--bg3);display:grid;grid-template-columns:1fr;gap:10px}
+.game-log-title{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:2px}
+.game-log-table{width:100%;border-collapse:collapse;font-size:11px}
+.game-log-table th{padding:5px 10px;text-align:right;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);font-weight:600;border-bottom:.5px solid var(--border)}
+.game-log-table th:first-child{text-align:left}
+.game-log-table td{padding:5px 10px;text-align:right;font-family:'DM Mono',monospace;color:var(--text-muted);border-bottom:.5px solid rgba(255,255,255,0.04)}
+.game-log-table td:first-child{text-align:left;font-family:'DM Sans',sans-serif;color:var(--text-dim)}
+.game-log-table tr:last-child td{border-bottom:none}
+.game-log-table .gl-hi{color:var(--green);font-weight:500}
+.game-log-table .gl-lo{color:var(--red)}
+.game-log-table .gl-avg{color:var(--gold)}
+.game-log-table .gl-above{color:var(--green)}
+.game-log-table .gl-below{color:var(--red)}
+.game-log-avg-row td{border-top:.5px solid var(--border);color:var(--gold)!important;font-weight:500}
+.filter-row{display:flex;gap:8px;margin-bottom:13px;flex-wrap:wrap}
+.f-btn{background:var(--bg3);border:.5px solid var(--border);color:var(--text-muted);padding:5px 13px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:11px;cursor:pointer;transition:all .15s}
+.f-btn:hover,.f-btn.active{background:var(--gold-bg);border-color:var(--gold-border);color:var(--gold)}
+.section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.section-title{font-family:'Playfair Display',serif;font-size:18px;font-weight:700}
+.section-note{font-size:11px;color:var(--text-dim)}
+.gold-rule{height:.5px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent);margin:26px 0}
+.section-wrap{margin-bottom:26px}
+
+/* ── L10 SPARKLINE (pure CSS bars) ── */
+.sparkbar-row{display:flex;align-items:flex-end;gap:2px;height:30px}
+.sparkbar{width:6px;background:var(--gold-dim);border-radius:1px 1px 0 0;transition:background .2s;min-height:2px}
+.sparkbar.hi{background:var(--green)}
+.sparkbar.lo{background:var(--red)}
+
+/* ── FAQ ── */
+.faq-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.faq-item{background:var(--bg2);border:.5px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.faq-q{padding:13px 17px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .15s;user-select:none}
+.faq-q:hover{background:rgba(255,255,255,0.02)}
+.faq-qt{font-size:13px;font-weight:500}
+.faq-arr{font-size:11px;color:var(--gold);transition:transform .25s;flex-shrink:0}
+.faq-item.open .faq-arr{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 17px 14px;font-size:12px;color:var(--text-muted);line-height:1.75;border-top:.5px solid var(--border)}
+.faq-item.open .faq-a{display:block}
+.faq-a strong{color:var(--gold);font-weight:600}
+.faq-a .mono{font-family:'DM Mono',monospace;color:var(--text);font-size:11px}
+
+/* ── HOW IT WORKS ── */
+.factors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-top:14px}
+.factor{background:var(--bg3);border-radius:var(--r);padding:14px 15px}
+.factor-title{font-size:11px;font-weight:600;color:var(--gold);margin-bottom:5px}
+.factor-body{font-size:11px;color:var(--text-muted);line-height:1.65}
+.factor-body .pos{color:var(--green)}
+.factor-body .neg{color:var(--red)}
+
+/* ── FOOTER ── */
+footer{border-top:.5px solid var(--border);padding:20px 0 0;display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.footer-brand{font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:var(--gold);margin-bottom:4px}
+.footer-disc{font-size:10px;color:var(--text-dim);max-width:500px;line-height:1.55}
+.footer-right{font-size:10px;color:var(--text-dim);text-align:right;flex-shrink:0}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.au{animation:fadeUp .4s ease forwards}
+
+@media(max-width:900px){.hero-grid{grid-template-columns:1fr}.c-ball{display:none}}
+@media(max-width:600px){.games-grid{grid-template-columns:1fr}.faq-grid{grid-template-columns:1fr}.factors-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="h-left">
+    <div class="site-presents">mot.inc presents</div>
+    <div class="site-title">The Magic <em>8</em> Ball</div>
+  </div>
+  <div class="h-right">
+    <div class="live-pill">LIVE · L10</div>
+    <div class="date-pill" id="hdr-date">—</div>
+    <button class="btn" onclick="init()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6A4 4 0 1 1 7.5 2.27"/><path d="M10 2v2.5H7.5"/></svg>
+      Refresh
+    </button>
+  </div>
+</header>
+
+<!-- LOADING -->
+<div id="loading">
+  <div class="ball-spin"></div>
+  <div class="load-text">Consulting the oracle...</div>
+  <div class="load-sub" id="load-sub">Fetching today's games from ESPN</div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="top-banner"></div>
+
+  <!-- HERO -->
+  <div class="hero-grid au">
+    <div class="lock-card">
+      <div class="card-head">
+        <div class="section-label">🎱 The Magic 8 Ball Predicts</div>
+        <div class="conf-badge conf-hi" id="lock-badge">—</div>
+      </div>
+      <div class="lock-body">
+        <div class="lock-name" id="lock-name">—</div>
+        <div class="lock-meta" id="lock-meta">—</div>
+        <div class="lock-stat-row">
+          <span class="lock-stat-label" id="lock-stat-lbl">—</span>
+          <span class="lock-stat-val" id="lock-stat-val">—</span>
+          <span class="lock-trend" id="lock-trend">—</span>
+        </div>
+        <div class="stat-pills">
+          <div class="pill"><div class="pill-label">L10 Avg</div><div class="pill-val pv-gold" id="lp-l10">—</div></div>
+          <div class="pill"><div class="pill-label">DK Line</div><div class="pill-val" id="lp-dkline">—</div></div>
+          <div class="pill"><div class="pill-label">Hit Rate vs Line</div><div class="pill-val pv-green" id="lp-hitrate">—</div></div>
+          <div class="pill"><div class="pill-label">L4 Streak</div><div class="pill-val pv-green" id="lp-l4">—</div></div>
+          <div class="pill"><div class="pill-label">Highest (L10)</div><div class="pill-val pv-green" id="lp-hi">—</div></div>
+          <div class="pill"><div class="pill-label">Lowest (L10)</div><div class="pill-val pv-red" id="lp-lo">—</div></div>
+        </div>
+      </div>
+      <div class="lock-foot">
+        <span>Today: <span id="lock-matchup">—</span></span>
+        <span id="lock-conf-text">Confidence: —</span>
+      </div>
+    </div>
+
+    <div class="c-ball">
+      <div class="eight-ball"><div class="ball-inner"><div class="ball-n">8</div></div></div>
+      <div class="ball-tag">Ask.<br>Receive.<br>Profit.</div>
+    </div>
+
+    <div class="slate-card">
+      <div class="section-label" style="margin-bottom:4px">Today's Slate</div>
+      <div class="slate-nums">
+        <div class="slate-num-item"><div class="slate-num sn-gold" id="st-games">—</div><div class="slate-lbl">Games</div></div>
+        <div class="slate-num-item"><div class="slate-num sn-blue" id="st-players">—</div><div class="slate-lbl">Players</div></div>
+        <div class="slate-num-item"><div class="slate-num sn-green" id="st-qualified">—</div><div class="slate-lbl">Picks</div></div>
+      </div>
+      <div class="algo-desc">
+        Each player's <strong style="color:var(--gold)">last 10 games</strong> are fetched live from ESPN. L10 averages are compared against estimated DraftKings lines (derived from season averages using standard sportsbook shading). The <strong style="color:var(--gold)">vs DK Line</strong> column shows how much the L10 avg beats or misses the estimated prop line. Confidence scored on 4 factors: L10 vs DK line edge, trend consistency, stat reliability, and minutes floor.
+      </div>
+    </div>
+  </div>
+
+  <div class="gold-rule"></div>
+
+  <!-- PARLAY -->
+  <div class="parlay-wrap au">
+    <div class="parlay-head">
+      <div>
+        <div class="parlay-title" id="parlay-title">Today's Best Parlay</div>
+        <div class="parlay-sub">Highest-confidence picks · Real L10 data · One prop per player</div>
+      </div>
+      <div class="parlay-badge" id="parlay-badge">Loading…</div>
+    </div>
+    <div class="parlay-legs" id="parlay-legs">
+      <div class="loading-leg"><span class="spinner"></span>Fetching player game logs…</div>
+    </div>
+  </div>
+
+  <div class="gold-rule"></div>
+
+  <!-- PROPS TABLE -->
+  <div class="section-wrap">
+    <div class="section-head">
+      <div class="section-title">Player Stats Board</div>
+      <div class="section-note">● in parlay &nbsp;·&nbsp; click player name to expand L10 games</div>
+    </div>
+    <div class="filter-row">
+      <button class="f-btn active" onclick="filterProps('all',this)">All</button>
+      <button class="f-btn" onclick="filterProps('points',this)">Points</button>
+      <button class="f-btn" onclick="filterProps('rebounds',this)">Rebounds</button>
+      <button class="f-btn" onclick="filterProps('assists',this)">Assists</button>
+      <button class="f-btn" onclick="filterProps('picks',this)">Picks Only</button>
+    </div>
+    <div class="props-table-wrap">
+      <table>
+        <thead><tr>
+          <th>Player</th><th>Team</th><th>Stat</th>
+          <th class="r">L10 Avg</th><th class="r">Season Avg</th><th class="r">Δ vs Season</th>
+          <th class="r">DK Line</th><th class="r">vs Line</th>
+          <th class="r">Hit Rate</th><th class="r">L4 Streak</th>
+          <th class="r">L10 High</th><th class="r">L10 Low</th>
+          <th class="r">Confidence</th><th class="r">Pick</th>
+        </tr></thead>
+        <tbody id="props-body"></tbody>
+      </table>
+    </div>
+    <div style="font-size:10px;color:var(--text-dim);margin-top:8px;padding:0 2px">
+      <span style="color:var(--green)">■</span> Live DraftKings line (ESPN propBets · Provider 100) &nbsp;·&nbsp;
+      <span style="color:var(--gold)">■</span> * Estimated line (season avg − 0.5, posted before DK releases props)
+    </div>
+  </div>
+
+  <div class="gold-rule"></div>
+
+  <!-- HOW IT WORKS -->
+  <div class="section-wrap">
+    <div class="section-head"><div class="section-title">How Picks Are Made</div></div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px">Four factors combine to produce a 0–100 confidence score for each prop.</div>
+    <div class="factors-grid">
+      <div class="factor">
+        <div class="factor-title">① L10 vs Season Delta</div>
+        <div class="factor-body">The gap between a player's last 10 games average and their full-season average. A player averaging <span class="pos">24 pts in L10</span> vs <span class="neg">19 pts for the season</span> is in <strong style="color:var(--gold)">clear hot form</strong>. This is the strongest signal — recent form predicts near-term performance far better than season averages.</div>
+      </div>
+      <div class="factor">
+        <div class="factor-title">② Trend Consistency</div>
+        <div class="factor-body">Not just the average — we measure how many of the last 10 games beat the season average. A player who beat their season avg in <span class="pos">8 of 10 games</span> scores much higher than one who had one huge outlier game that pulled the average up.</div>
+      </div>
+      <div class="factor">
+        <div class="factor-title">③ Stat Reliability</div>
+        <div class="factor-body">Points are the most consistent stat for featured players — they look for their shot regardless of game flow. Rebounds depend on matchup and pace. Assists are the most volatile — one defensive adjustment disrupts them. We apply reliability weights: <span class="pos">PTS +8</span>, <span class="pos">REB +5</span>, <span class="pos">AST +2</span>.</div>
+      </div>
+      <div class="factor">
+        <div class="factor-title">④ Minutes Floor</div>
+        <div class="factor-body">Only players averaging <span class="pos">≥22 mins/game</span> in the L10 qualify. Small-sample blowout minutes or injury returns distort averages. The minutes floor ensures we're evaluating real rotation players with consistent opportunity.</div>
+      </div>
+    </div>
+    <div style="margin-top:14px;padding:12px 15px;background:var(--bg2);border:.5px solid var(--border);border-radius:var(--r);font-size:11px;color:var(--text-muted);line-height:1.7">
+      <strong style="color:var(--gold)">What would make this more accurate:</strong> Adding opponent defensive ranking vs stat type (e.g. "opponent allows 3rd-most PTS to SGs"), home/away splits, back-to-back fatigue flags, and injury reports. These require a paid data provider like BallDontLie or SportsDataIO. The current model is strong on form but blind to matchup context.
+    </div>
+  </div>
+
+  <div class="gold-rule"></div>
+
+  <!-- FAQ -->
+  <div class="section-wrap">
+    <div class="section-head"><div class="section-title">FAQ</div></div>
+    <div class="faq-grid" id="faq-grid"></div>
+  </div>
+
+</div><!-- /main -->
+
+<footer>
+  <div>
+    <div class="footer-brand">The Magic 8 Ball</div>
+    <div class="footer-disc">For entertainment purposes only. Not betting advice. Player game logs and game data sourced live from ESPN's public API. Always gamble responsibly. 21+</div>
+  </div>
+  <div class="footer-right">mot.inc<br><span id="footer-time"></span></div>
+</footer>
+</div><!-- /wrap -->
+
+<script>
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const CORE_API = 'https://sports.core.api.espn.com/v2/sports/basketball/leagues/nba';
+
+// ESPN prop type name → stat key (from DraftKings propBets endpoint)
+// Type names confirmed from live propBets response
+const PROP_TYPE_MAP = {
+  'total points':    'pts',
+  'total rebounds':  'reb',
+  'total assists':   'ast',
+  'points':          'pts',
+  'rebounds':        'reb',
+  'assists':         'ast',
+};
+
+// Populated by fetchAllPropLines() — keyed by ESPN athlete ID
+// { athleteId: { pts: 24.5, reb: 8.5, ast: 6.5 } }
+let PROP_LINES = {};
+
+function athleteIdFromRef(ref) {
+  const m = (ref || '').match(/athletes\/(\d+)/);
+  return m ? m[1] : null;
+}
+const pad2 = n => String(n).padStart(2,'0');
+const fmt1 = n => (isNaN(n) || n == null) ? '—' : parseFloat(n).toFixed(1);
+const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const fmtDelta = n => n > 0 ? '+'+n.toFixed(1) : n.toFixed(1);
+
+const now = new Date();
+const dateStr = `${now.getFullYear()}${pad2(now.getMonth()+1)}${pad2(now.getDate())}`;
+$('hdr-date').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+$('footer-time').textContent = 'Updated ' + now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+
+function showMain() {
+  $('loading').style.display = 'none';
+  $('main').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════
+// ESPN FETCHER — direct, no proxy (open CORS)
+// ═══════════════════════════════════════════════════════
+async function espnFetch(url) {
+  const res = await fetch(url, { signal: AbortSignal.timeout(12000) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════
+// GAME LOG PARSER
+// endpoint: site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{id}/gamelog?season=2026
+// labels index: 0=MIN,1=FG,2=FG%,3=3PT,4=3P%,5=FT,6=FT%,7=REB,8=AST,9=BLK,10=STL,11=PF,12=TO,13=PTS
+// ═══════════════════════════════════════════════════════
+function parseGameLog(data) {
+  // Collect every played game across all seasonType categories
+  const games = [];
+  for (const st of (data.seasonTypes || [])) {
+    for (const cat of (st.categories || [])) {
+      for (const ev of (cat.events || [])) {
+        const s = ev.stats;
+        if (!s || s.length < 14) continue;
+        const mins = parseFloat(s[0]);
+        if (isNaN(mins) || mins === 0) continue; // Skip DNPs
+        games.push({
+          eventId: ev.eventId,
+          mins,
+          pts:  parseInt(s[13]) || 0,
+          reb:  parseInt(s[7])  || 0,
+          ast:  parseInt(s[8])  || 0,
+          blk:  parseInt(s[9])  || 0,
+          stl:  parseInt(s[10]) || 0,
+          to:   parseInt(s[12]) || 0,
+          date: null,     // filled after cross-referencing team schedule
+          opponent: null, // filled after cross-referencing team schedule
+        });
+      }
+    }
+  }
+  return games;
+}
+
+// scheduleMap: { eventId -> { date: ISO string, shortName: "HOU @ MEM" } }
+function calcL10Stats(games, scheduleMap) {
+  // Cross-reference dates from schedule and sort chronologically
+  // This is critical — categories in the gamelog are NOT in date order
+  games.forEach(g => {
+    const info = scheduleMap?.[g.eventId];
+    if (info) {
+      g.date = info.date;
+      g.opponent = info.shortName;
+    }
+  });
+
+  // Sort by actual game date so slice(-10) is genuinely the last 10
+  const dated = games.filter(g => g.date);
+  const undated = games.filter(g => !g.date);
+  dated.sort((a, b) => new Date(a.date) - new Date(b.date));
+  // Undated games (edge case) go at the start — least likely to be recent
+  const sorted = [...undated, ...dated];
+
+  const last10 = sorted.slice(-10);
+  if (!last10.length) return null;
+
+  const pts  = last10.map(g=>g.pts);
+  const reb  = last10.map(g=>g.reb);
+  const ast  = last10.map(g=>g.ast);
+  const blk  = last10.map(g=>g.blk);
+  const stl  = last10.map(g=>g.stl);
+  const mins = last10.map(g=>g.mins);
+
+  return {
+    gp: sorted.length,
+    l10: last10.length,
+    avgMins: avg(mins),
+    // For each stat we store avg/hi/lo AND the full game objects (with date+opponent)
+    pts:  { avg: avg(pts),  hi: Math.max(...pts),  lo: Math.min(...pts),  games: last10.map(g=>({ val:g.pts,  date:g.date, opp:g.opponent })) },
+    reb:  { avg: avg(reb),  hi: Math.max(...reb),  lo: Math.min(...reb),  games: last10.map(g=>({ val:g.reb,  date:g.date, opp:g.opponent })) },
+    ast:  { avg: avg(ast),  hi: Math.max(...ast),  lo: Math.min(...ast),  games: last10.map(g=>({ val:g.ast,  date:g.date, opp:g.opponent })) },
+    blk:  { avg: avg(blk),  hi: Math.max(...blk),  lo: Math.min(...blk),  games: last10.map(g=>({ val:g.blk,  date:g.date, opp:g.opponent })) },
+    stl:  { avg: avg(stl),  hi: Math.max(...stl),  lo: Math.min(...stl),  games: last10.map(g=>({ val:g.stl,  date:g.date, opp:g.opponent })) },
+  };
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIDENCE ALGORITHM (0–100)
+// ═══════════════════════════════════════════════════════
+function calcConfidence(l10avg, seasonAvg, statGames, statType, avgMins, hitRateVsLine, l4VsLine) {
+  let score = 35;
+  const delta = l10avg - seasonAvg;
+  const deltaPct = seasonAvg > 0 ? Math.abs(delta) / seasonAvg : 0;
+
+  // ① L10 vs season delta — primary signal (max +28)
+  if (deltaPct > 0.25) score += 28;
+  else if (deltaPct > 0.15) score += 20;
+  else if (deltaPct > 0.08) score += 12;
+  else if (deltaPct > 0.03) score += 5;
+  else score -= 5; // Essentially no trend
+
+  // ② Trend consistency — how many of the 10 beat season avg (max +20)
+  const beatsAvg = statGames.filter(g => (g.val ?? g) > seasonAvg).length;
+  if (beatsAvg >= 8) score += 20;
+  else if (beatsAvg >= 6) score += 12;
+  else if (beatsAvg >= 5) score += 5;
+  else if (beatsAvg <= 3) score -= 10; // Counter-trend
+
+  // ②-b Hit rate vs DK line — bonus when real line available (max +12)
+  if (hitRateVsLine != null) {
+    if (hitRateVsLine >= 8) score += 12;
+    else if (hitRateVsLine >= 7) score += 8;
+    else if (hitRateVsLine >= 6) score += 4;
+    else if (hitRateVsLine <= 3) score -= 10;
+    else if (hitRateVsLine <= 4) score -= 5;
+  }
+  // L4 hot streak vs DK line bonus
+  if (l4VsLine != null) {
+    if (l4VsLine === 4) score += 6;
+    else if (l4VsLine === 3) score += 3;
+    else if (l4VsLine === 0) score -= 6;
+    else if (l4VsLine === 1) score -= 3;
+  }
+
+  // ③ Stat reliability (max +8)
+  if (statType === 'points')   score += 8;
+  else if (statType === 'rebounds') score += 5;
+  else if (statType === 'assists')  score += 2;
+
+  // ④ Minutes floor — penalise players with low minutes (games may be blowout skewed)
+  if (avgMins < 22) score -= 15;
+  else if (avgMins < 26) score -= 5;
+  else if (avgMins >= 32) score += 4; // Starter with real run
+
+  return Math.min(97, Math.max(5, Math.round(score)));
+}
+
+// ═══════════════════════════════════════════════════════
+// BUILD PROPS
+// ═══════════════════════════════════════════════════════
+function buildProps(players) {
+  const props = [];
+  for (const p of players) {
+    if (!p.l10) continue;
+    const { l10, gp, avgMins, pts, reb, ast } = p.l10;
+
+    // Use ESPN season leader value as "season avg" baseline
+    const sznPts = p.seasonAvg?.pts ?? pts.avg;
+    const sznReb = p.seasonAvg?.reb ?? reb.avg;
+    const sznAst = p.seasonAvg?.ast ?? ast.avg;
+
+    const makeEntry = (statType, statLabel, l10Stat, sznAvg) => {
+      if (l10Stat.avg <= 0) return null;
+
+      // Step 1: Resolve DK line (real from propBets or estimated from season avg)
+      const statKeyMap = { points:'pts', rebounds:'reb', assists:'ast' };
+      const statKey = statKeyMap[statType];
+      const realLine = PROP_LINES[p.id]?.[statKey] ?? null;
+      const dkLine = realLine != null ? realLine : Math.round(sznAvg * 2) / 2 - 0.5;
+      const dkLineIsReal = realLine != null;
+
+      // Step 2: Compute hit rate and L4 streak against DK line
+      const vals = l10Stat.games.map(g => g.val);
+      const hitRate  = dkLineIsReal ? vals.filter(v => v > dkLine).length : null;
+      const l4Streak = dkLineIsReal ? vals.slice(-4).filter(v => v > dkLine).length : null;
+
+      // Step 3: Confidence — passes hit rate and L4 as named args
+      const conf = calcConfidence(l10Stat.avg, sznAvg, l10Stat.games, statType, avgMins, hitRate, l4Streak);
+
+      const delta  = l10Stat.avg - sznAvg;
+      const vsLine = l10Stat.avg - dkLine;
+      const pick   = delta > 0.3 ? 'OVER' : delta < -0.3 ? 'UNDER' : 'WATCH';
+
+      return {
+        playerId: p.id,
+        player: p.name,
+        team: p.team,
+        matchup: p.matchup,
+        stat: statType,
+        statLabel,
+        l10avg: l10Stat.avg,
+        sznAvg,
+        delta,
+        dkLine,        // DraftKings prop line (real if available, estimated otherwise)
+        dkLineIsReal,  // true = live from DK, false = estimated from season avg
+        vsLine,        // L10 avg minus the DK line (positive = beats line)
+        hitRate,       // games beating DK line out of 10 (null if estimated line)
+        l4Streak,      // games beating DK line in last 4 (null if estimated line)
+        hi: l10Stat.hi,
+        lo: l10Stat.lo,
+        gameLog: l10Stat.games, // [{val, date, opp}] — full objects for expand row
+        gp,
+        avgMins,
+        confidence: conf,
+        pick,
+        qualified: conf >= 68 && avgMins >= 22,
+      };
+    };
+
+    const ptsEntry = makeEntry('points',   'PTS', pts, sznPts);
+    const rebEntry = makeEntry('rebounds', 'REB', reb, sznReb);
+    const astEntry = makeEntry('assists',  'AST', ast, sznAst);
+
+    // Add best stat only per player for parlay (avoid duplication)
+    const entries = [ptsEntry, rebEntry, astEntry].filter(Boolean);
+    entries.sort((a,b) => b.confidence - a.confidence);
+    if (entries.length) entries[0].bestForParlay = true;
+
+    props.push(...entries);
+  }
+  return props.sort((a,b) => b.confidence - a.confidence);
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+function renderLock(prop) {
+  if (!prop) return;
+  $('lock-name').textContent = prop.player;
+  $('lock-meta').textContent = `${prop.team} · ${prop.matchup} · ${Math.round(prop.avgMins)} min/game (L10)`;
+  $('lock-stat-lbl').textContent = prop.statLabel + ' — L10 Average';
+  $('lock-stat-val').textContent = fmt1(prop.l10avg);
+
+  const tr = $('lock-trend');
+  if (prop.delta > 0.3)  { tr.textContent = '↑ HOT'; tr.className = 'lock-trend trend-up'; }
+  else if (prop.delta < -0.3) { tr.textContent = '↓ COLD'; tr.className = 'lock-trend trend-down'; }
+  else { tr.textContent = '→ FLAT'; tr.className = 'lock-trend trend-flat'; }
+
+  $('lp-l10').textContent    = fmt1(prop.l10avg);
+  $('lp-dkline').textContent = fmt1(prop.dkLine) + (prop.dkLineIsReal ? ' ✓' : '*');
+
+  const hrEl = $('lp-hitrate');
+  if (prop.hitRate !== null) {
+    hrEl.textContent = prop.hitRate + '/10';
+    hrEl.className = 'pill-val ' + (prop.hitRate >= 7 ? 'pv-green' : prop.hitRate >= 5 ? 'pv-gold' : 'pv-red');
+  } else {
+    hrEl.textContent = '—';
+    hrEl.className = 'pill-val';
+  }
+
+  const l4El = $('lp-l4');
+  if (prop.l4Streak !== null) {
+    l4El.textContent = prop.l4Streak + '/4' + (prop.l4Streak === 4 ? ' 🔥' : prop.l4Streak === 0 ? ' ❄' : '');
+    l4El.className = 'pill-val ' + (prop.l4Streak >= 3 ? 'pv-green' : prop.l4Streak >= 2 ? 'pv-gold' : 'pv-red');
+  } else {
+    l4El.textContent = '—';
+    l4El.className = 'pill-val';
+  }
+
+  $('lp-hi').textContent   = prop.hi;
+  $('lp-lo').textContent   = prop.lo;
+  $('lock-matchup').textContent   = prop.matchup;
+  $('lock-conf-text').textContent = `Confidence: ${prop.confidence}/100`;
+
+  const badge = $('lock-badge');
+  badge.textContent = prop.confidence + ' / 100';
+  badge.className = 'conf-badge ' + (prop.confidence >= 80 ? 'conf-hi' : prop.confidence >= 68 ? 'conf-md' : 'conf-lo');
+}
+
+function renderParlay(props) {
+  const parlay = [];
+  const seen = new Set();
+  for (const p of props) {
+    if (p.bestForParlay && p.qualified && !seen.has(p.playerId) && parlay.length < 8) {
+      seen.add(p.playerId);
+      parlay.push(p);
+    }
+  }
+  // Pad to 3 if not enough qualified
+  for (const p of props) {
+    if (!seen.has(p.playerId) && parlay.length < 3) {
+      seen.add(p.playerId);
+      parlay.push(p);
+    }
+  }
+
+  $('parlay-title').textContent = `Today's Best ${parlay.length}-Leg Parlay`;
+  $('parlay-badge').textContent = `${parlay.length} legs · pure form`;
+
+  const container = $('parlay-legs');
+  container.innerHTML = '';
+  parlay.forEach((p, i) => {
+    const delta = p.delta;
+    const arrowCls = delta > 0.3 ? 'la-up' : delta < -0.3 ? 'la-down' : 'la-flat';
+    const arrowChar = delta > 0.3 ? '↑' : delta < -0.3 ? '↓' : '→';
+
+    const div = document.createElement('div');
+    div.className = 'p-leg';
+    div.innerHTML = `
+      <span class="leg-n">${pad2(i+1)}</span>
+      <div class="leg-info">
+        <div class="leg-player">${p.player}</div>
+        <div class="leg-team">${p.team} · ${p.matchup}</div>
+      </div>
+      <div class="leg-pick">
+        <span class="leg-stat-lbl">${p.statLabel} L10 avg</span>
+        <span class="leg-avg">${fmt1(p.l10avg)}</span>
+        <span class="leg-arrow ${arrowCls}">${arrowChar} ${p.pick}</span>
+      </div>
+      <div class="leg-right">
+        <span class="leg-conf-score">${p.confidence}/100</span>
+        <span class="leg-sub">L10 ${fmt1(p.l10avg)} vs szn ${fmt1(p.sznAvg)} (${fmtDelta(p.delta)})</span>
+        <span class="leg-sub">${Math.round(p.avgMins)} min/gm · ${p.gp} games played</span>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function renderGames(games) {
+  const grid = $('games-grid');
+  grid.innerHTML = '';
+  if (!games.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;padding:30px;text-align:center;color:var(--text-muted);font-size:13px">No NBA games scheduled today.</div>`;
+    return;
+  }
+  games.forEach(g => {
+    const div = document.createElement('div');
+    div.className = 'game-card au';
+    div.innerHTML = `
+      <div class="gc-head">
+        <span class="${g.isLive?'gc-live':''}">${g.isLive?'● LIVE':g.time}</span>
+        <span>${g.network}</span>
+      </div>
+      <div class="gc-body">
+        <div class="gc-team"><span class="gc-name">${g.away}</span><span class="gc-record">${g.awayRecord}</span></div>
+        <div class="gc-div"></div>
+        <div class="gc-team"><span class="gc-name">${g.home}</span><span class="gc-record">${g.homeRecord}</span></div>
+      </div>
+      <div class="gc-foot"><span>Venue: ${g.venue}</span><span>${g.statusDetail}</span></div>`;
+    grid.appendChild(div);
+  });
+}
+
+let allProps = [];
+let activeFilter = 'all';
+
+function renderTable(props) {
+  const tbody = $('props-body');
+  tbody.innerHTML = '';
+  const filtered = activeFilter === 'all' ? props
+    : activeFilter === 'picks' ? props.filter(p => p.qualified)
+    : props.filter(p => p.stat === activeFilter);
+
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="14" style="padding:20px;text-align:center;color:var(--text-muted)">No props match this filter.</td></tr>`;
+    return;
+  }
+
+  filtered.forEach(p => {
+    const dClass = p.delta > 0 ? 'tru' : p.delta < 0 ? 'trd' : 'trf';
+    const cc = p.confidence >= 80 ? 'var(--green)' : p.confidence >= 68 ? 'var(--gold)' : 'var(--text-muted)';
+    const recClass = p.pick === 'OVER' ? 'rb-over' : p.pick === 'UNDER' ? 'rb-under' : 'rb-watch';
+    const inParlay = p.bestForParlay && p.qualified;
+    const rowId = `gl-${p.playerId}-${p.stat}`;
+
+    // Main summary row
+    const tr = document.createElement('tr');
+    tr.className = 'summary-row';
+    tr.innerHTML = `
+      <td>
+        ${inParlay ? '<span class="dot"></span>' : ''}
+        <button class="td-name-btn" onclick="toggleGameLog('${rowId}', this)">
+          <span class="expand-icon">▶</span>${p.player}
+        </button>
+      </td>
+      <td><span class="td-dim">${p.team}</span></td>
+      <td><span class="td-dim">${p.statLabel}</span></td>
+      <td class="r"><span class="td-mono">${fmt1(p.l10avg)}</span></td>
+      <td class="r"><span class="td-mono">${fmt1(p.sznAvg)}</span></td>
+      <td class="r"><span class="td-trend ${dClass}">${fmtDelta(p.delta)}</span></td>
+      <td class="r"><span class="td-mono" style="color:${p.dkLineIsReal ? 'var(--green)' : 'var(--gold)'}" title="${p.dkLineIsReal ? 'Live DraftKings line' : 'Estimated line'}">${fmt1(p.dkLine)}${p.dkLineIsReal ? '' : '*'}</span></td>
+      <td class="r"><span class="td-trend ${p.vsLine >= 0 ? 'tru' : 'trd'}">${p.vsLine >= 0 ? '+' : ''}${p.vsLine.toFixed(1)}</span></td>
+      <td class="r">${p.hitRate !== null
+        ? `<span class="td-mono" style="color:${p.hitRate >= 8 ? 'var(--green)' : p.hitRate >= 6 ? 'var(--gold)' : p.hitRate >= 4 ? 'var(--text-muted)' : 'var(--red)'}">${p.hitRate}/10</span>`
+        : `<span class="td-dim">—</span>`}</td>
+      <td class="r">${p.l4Streak !== null
+        ? `<span class="td-mono" style="color:${p.l4Streak === 4 ? 'var(--green)' : p.l4Streak === 3 ? 'var(--green)' : p.l4Streak === 2 ? 'var(--gold)' : p.l4Streak === 1 ? 'var(--text-muted)' : 'var(--red)'}">${p.l4Streak}/4${p.l4Streak === 4 ? ' 🔥' : p.l4Streak === 0 ? ' ❄' : ''}</span>`
+        : `<span class="td-dim">—</span>`}</td>
+      <td class="r"><span class="td-mono">${p.hi}</span></td>
+      <td class="r"><span class="td-mono">${p.lo}</span></td>
+      <td class="r"><span class="conf-num" style="color:${cc}">${p.confidence}</span></td>
+      <td class="r"><span class="rec-badge ${recClass}">${p.pick}</span></td>`;
+    tbody.appendChild(tr);
+
+    // Hidden expandable game-log row
+    const expandRow = document.createElement('tr');
+    expandRow.className = 'game-log-row';
+    expandRow.id = rowId;
+    expandRow.style.display = 'none';
+
+    const colCount = 14;
+    const gameLog = p.gameLog || []; // [{val, date, opp}] sorted chronologically
+    const vals = gameLog.map(g => g.val);
+    const hiVal = vals.length ? Math.max(...vals) : 0;
+    const loVal = vals.length ? Math.min(...vals) : 0;
+    const sznAvg = p.sznAvg;
+
+    const fmtDate = iso => {
+      if (!iso) return '—';
+      const d = new Date(iso);
+      return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+    };
+
+    // For the expand row, compute which games beat the DK line
+    const dkLine = p.dkLine;
+    const dkReal = p.dkLineIsReal;
+
+    let gameRows = '';
+    gameLog.forEach((g, i) => {
+      const { val, date, opp } = g;
+      const isHi = val === hiVal;
+      const isLo = val === loVal && loVal !== hiVal;
+      const vsAvg = val > sznAvg ? 'gl-above' : val < sznAvg ? 'gl-below' : '';
+      const cls = isHi ? 'gl-hi' : isLo ? 'gl-lo' : vsAvg;
+      const diff = val - sznAvg;
+      // DK line beat/miss — only shown when real line available
+      const beatLine = dkReal ? val > dkLine : null;
+      const vsDkDiff = dkReal ? (val - dkLine) : null;
+      const beatCls = beatLine === true ? 'gl-above' : beatLine === false ? 'gl-below' : '';
+      const beatCell = dkReal
+        ? `<td class="${beatCls}" style="font-weight:600">${beatLine ? '✓ OVER' : '✗ UNDER'}</td>
+           <td class="${beatCls}">${vsDkDiff >= 0 ? '+' : ''}${vsDkDiff.toFixed(1)}</td>`
+        : `<td class="td-dim">—</td><td class="td-dim">—</td>`;
+      gameRows += `<tr>
+        <td>${fmtDate(date)}</td>
+        <td>${opp || '—'}</td>
+        <td class="${cls}">${val}${isHi ? ' ▲' : isLo ? ' ▼' : ''}</td>
+        <td class="${vsAvg}">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}</td>
+        ${beatCell}
+      </tr>`;
+    });
+
+    expandRow.innerHTML = `
+      <td colspan="${colCount}">
+        <div class="game-log-inner">
+          <div class="game-log-title">${p.player} — Last ${gameLog.length} Games · ${p.statLabel} &nbsp;·&nbsp; Season avg: ${fmt1(sznAvg)} &nbsp;·&nbsp; DK line: <span style="color:${p.dkLineIsReal ? 'var(--green)' : 'var(--gold)'}">${fmt1(p.dkLine)}${p.dkLineIsReal ? ' ✓ live' : '* est.'}</span></div>
+          <table class="game-log-table">
+            <thead><tr>
+              <th style="text-align:left">Date</th>
+              <th style="text-align:left">Matchup</th>
+              <th class="r">${p.statLabel}</th>
+              <th class="r">vs Szn Avg</th>
+              <th class="r">${dkReal ? 'vs DK ' + fmt1(dkLine) : 'DK Line'}</th>
+              <th class="r">Diff</th>
+            </tr></thead>
+            <tbody>
+              ${gameRows}
+              <tr class="game-log-avg-row">
+                <td colspan="2">L10 Average</td>
+                <td class="gl-avg">${fmt1(p.l10avg)}</td>
+                <td class="${p.delta >= 0 ? 'gl-above' : 'gl-below'}">${fmtDelta(p.delta)} vs szn</td>
+                <td colspan="2" class="${dkReal ? (p.hitRate >= 6 ? 'gl-above' : 'gl-below') : ''}">${dkReal ? `${p.hitRate}/10 beat line &nbsp;·&nbsp; L4: ${p.l4Streak}/4` : '— estimated line'}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </td>`;
+    tbody.appendChild(expandRow);
+  });
+}
+
+function toggleGameLog(rowId, btn) {
+  const row = document.getElementById(rowId);
+  const summaryRow = btn.closest('tr');
+  const isOpen = row.style.display !== 'none';
+  row.style.display = isOpen ? 'none' : 'table-row';
+  summaryRow.classList.toggle('row-open', !isOpen);
+}
+
+function filterProps(type, btn) {
+  activeFilter = type;
+  document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable(allProps);
+}
+
+// ═══════════════════════════════════════════════════════
+// FAQ
+// ═══════════════════════════════════════════════════════
+const FAQ = [
+  { q: 'What does L10 mean?', a: '<strong>L10</strong> = Last 10 games. Every stat you see on this site — averages, highs, lows, trends — is calculated from the player\'s most recent 10 games, fetched live from ESPN\'s game log API. Season averages are shown for comparison only.' },
+  { q: 'What does the Confidence Score mean?', a: 'A <strong>0–100 score</strong> combining four factors: how much the L10 average diverges from the season average, how consistently the player has performed above/below that baseline across all 10 games, the reliability of the stat type (PTS > REB > AST), and a minutes floor filter to remove garbage-time distortions. <strong>80+</strong> = high conviction. <strong>68–79</strong> = qualifies for parlay. Below 68 = watch only.' },
+  { q: 'What is OVER / UNDER / WATCH?', a: '<strong>OVER</strong>: The player\'s L10 average is meaningfully higher than their season average — they\'re in form, bet the over on a prop line. <strong>UNDER</strong>: L10 average is meaningfully lower — they\'re running cold, consider the under. <strong>WATCH</strong>: The delta is too small to call — no strong edge either way. Avoid or research further.' },
+  { q: 'Why only L10 and not season averages?', a: 'Season averages are useful context but <strong>poor predictors of near-term performance</strong>. A player\'s L10 captures current form, conditioning, role changes, injuries returning to full fitness, or hot/cold shooting stretches. Research consistently shows recent game logs outperform full-season splits for short-window predictions.' },
+  { q: 'Where does the data come from?', a: '<strong>Game data</strong> (teams, times, venues) comes from ESPN\'s public scoreboard API. <strong>Player game logs</strong> — the per-game PTS/REB/AST/BLK/STL for each player — come from ESPN\'s athlete gamelog endpoint (<span class="mono">site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{id}/gamelog</span>). All data is fetched live each time you load or refresh.' },
+  { q: 'Why are some players missing?', a: 'The site pulls the <strong>statistical leaders</strong> from each team in today\'s games — the top scorer, rebounder, and assist man per team. Role players are not included. Also, players with fewer than ~7 games played in the L10 period (due to injury, suspension, etc.) may have thinner data.' },
+  { q: 'How is the parlay built?', a: 'The parlay takes the <strong>highest-confidence pick per player</strong> (max one prop per player to avoid correlation risk), requires a confidence score of 68+, requires 22+ avg minutes in L10, and selects up to 8 legs. The lock of the day is always the single highest-confidence individual pick.' },
+  { q: 'What would make picks more accurate?', a: 'The single biggest gap is <strong>opponent defensive matchup data</strong> — knowing that a team allows the 2nd-most points to shooting guards dramatically refines the pick. Other improvements: back-to-back game flags, home/away splits, injury report integration, and referee foul-rate data. All require a paid API like BallDontLie or SportsDataIO.' },
+  { q: 'Should I bet the full parlay?', a: 'The parlay is a <strong>tool for analysis</strong>, not a prescription. Multi-leg parlays compound risk significantly — even if each leg has a 70% edge, a 6-leg parlay wins only ~12% of the time. Sharp bettors typically prefer single-leg props with clear L10 edges. Use the parlay as inspiration, not a ticket.' },
+  { q: 'How often should I refresh?', a: 'Refresh <strong>morning of game day</strong> to get the freshest L10 data and confirm the slate. Player game logs update after each game. The site fetches live each refresh — there\'s no stale cache.' },
+];
+
+function renderFAQ() {
+  const grid = $('faq-grid');
+  FAQ.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'faq-item';
+    div.innerHTML = `
+      <div class="faq-q" onclick="toggleFaq(this)">
+        <span class="faq-qt">${item.q}</span>
+        <span class="faq-arr">▼</span>
+      </div>
+      <div class="faq-a">${item.a}</div>`;
+    grid.appendChild(div);
+  });
+}
+
+function toggleFaq(el) {
+  const item = el.closest('.faq-item');
+  const a = item.querySelector('.faq-a');
+  const isOpen = item.classList.contains('open');
+  item.classList.toggle('open', !isOpen);
+  a.style.display = isOpen ? 'none' : 'block';
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN
+// ═══════════════════════════════════════════════════════
+async function init() {
+  $('loading').style.display = 'flex';
+  $('main').style.display = 'none';
+  $('load-sub').textContent = 'Fetching today\'s games from ESPN…';
+
+  const ESPN_SB = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${dateStr}`;
+
+  let events = [];
+  let espnOk = false;
+
+  try {
+    const data = await espnFetch(ESPN_SB);
+    events = data.events || [];
+    espnOk = true;
+  } catch (e) {
+    // Try proxy fallback
+    try {
+      const data2 = await espnFetch('https://corsproxy.io/?' + encodeURIComponent(ESPN_SB));
+      events = data2.events || [];
+      espnOk = true;
+    } catch (e2) { console.warn('ESPN failed:', e2.message); }
+  }
+
+  $('st-games').textContent = events.length || (espnOk ? '0' : '—');
+
+  // Fetch real DraftKings prop lines from ESPN Core propBets endpoint (Provider 100)
+  // Run in background — will populate PROP_LINES by athlete ID
+  if (events.length) {
+    fetchAllPropLines(events).catch(e => console.warn('propLines failed:', e));
+  }
+
+  if (!espnOk) {
+    const b = $('top-banner'); b.className='banner';
+    b.textContent = '⚠ ESPN data unavailable. Check your connection and refresh.';
+  }
+
+  // Parse games for display
+  const games = events.map(ev => {
+    const comps = ev.competitions[0];
+    const home = comps.competitors.find(c=>c.homeAway==='home');
+    const away = comps.competitors.find(c=>c.homeAway==='away');
+    const state = ev.status?.type?.state;
+    return {
+      id: ev.id,
+      home: home?.team?.abbreviation||'—',
+      away: away?.team?.abbreviation||'—',
+      homeRecord: home?.records?.[0]?.summary||'',
+      awayRecord: away?.records?.[0]?.summary||'',
+      venue: comps.venue?.fullName || '—',
+      time: new Date(ev.date).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZoneName:'short'}),
+      network: comps.broadcasts?.[0]?.names?.[0]||'',
+      statusDetail: ev.status?.type?.shortDetail||'',
+      isLive: state==='in',
+    };
+  });
+
+  showMain();
+
+  // Extract player IDs from leaders
+  $('load-sub').textContent = 'Fetching player game logs…';
+  const playerMap = new Map(); // id → {name, team, matchup, seasonAvg}
+
+  events.forEach(ev => {
+    const comps = ev.competitions[0];
+    const matchup = ev.shortName;
+    comps.competitors.forEach(comp => {
+      const team = comp.team.abbreviation;
+      const leaders = comp.leaders || [];
+      const sznMap = {};
+      // Season averages from leader displayValues
+      const pts = leaders.find(l=>l.name==='pointsPerGame')?.leaders?.[0];
+      const reb = leaders.find(l=>l.name==='reboundsPerGame')?.leaders?.[0];
+      const ast = leaders.find(l=>l.name==='assistsPerGame')?.leaders?.[0];
+
+      [pts, reb, ast].forEach(l => {
+        if (!l) return;
+        const id = l.athlete.id;
+        if (!playerMap.has(id)) {
+          playerMap.set(id, { id, name: l.athlete.fullName, team, teamId: comp.team.id, matchup, seasonAvg: {} });
+        }
+      });
+
+      if (pts) {
+        const p = playerMap.get(pts.athlete.id);
+        if (p) p.seasonAvg.pts = parseFloat(pts.displayValue);
+      }
+      if (reb) {
+        const p = playerMap.get(reb.athlete.id);
+        if (p) p.seasonAvg.reb = parseFloat(reb.displayValue);
+      }
+      if (ast) {
+        const p = playerMap.get(ast.athlete.id);
+        if (p) p.seasonAvg.ast = parseFloat(ast.displayValue);
+      }
+    });
+  });
+
+  const playerList = [...playerMap.values()];
+  $('st-players').textContent = playerList.length;
+
+  // Pre-fetch team schedules so we can sort games by real date and attach opponent info.
+  // One schedule fetch per unique team covers all players on that team.
+  const SEASON = 2026;
+  const scheduleCache = new Map(); // teamId → {eventId: {date, shortName}}
+
+  async function getScheduleMap(teamId) {
+    if (scheduleCache.has(teamId)) return scheduleCache.get(teamId);
+    try {
+      const url = `https://site.api.espn.com/apis/site/v2/sports/basketball/nba/teams/${teamId}/schedule?season=${SEASON}`;
+      const data = await espnFetch(url);
+      const map = {};
+      for (const ev of (data.events || [])) {
+        map[ev.id] = { date: ev.date, shortName: ev.shortName };
+      }
+      scheduleCache.set(teamId, map);
+      return map;
+    } catch(e) {
+      scheduleCache.set(teamId, {});
+      return {};
+    }
+  }
+
+  async function fetchLog(player) {
+    try {
+      const [logData, scheduleMap] = await Promise.all([
+        espnFetch(`https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/${player.id}/gamelog?season=${SEASON}`),
+        getScheduleMap(player.teamId),
+      ]);
+      const games = parseGameLog(logData);
+      player.l10 = calcL10Stats(games, scheduleMap);
+    } catch(e) {
+      player.l10 = null;
+    }
+    return player;
+  }
+
+  // Fetch in batches of 6 to avoid overwhelming ESPN
+  const batchSize = 6;
+  const enriched = [];
+  for (let i = 0; i < playerList.length; i += batchSize) {
+    const batch = playerList.slice(i, i+batchSize);
+    const results = await Promise.all(batch.map(fetchLog));
+    enriched.push(...results);
+    $('load-sub').textContent = `Fetching game logs… ${Math.min(i+batchSize, playerList.length)}/${playerList.length}`;
+  }
+
+  // Build and render props
+  allProps = buildProps(enriched);
+  $('st-qualified').textContent = allProps.filter(p=>p.qualified&&p.bestForParlay).length;
+
+  const lock = allProps[0];
+  if (lock) renderLock(lock);
+  renderParlay(allProps);
+  renderTable(allProps);
+}
+
+// ═══════════════════════════════════════════════════════
+// REAL DRAFTKINGS PROP LINES
+// Source: ESPN Core API /odds/100/propBets (Provider 100 = DraftKings)
+// Same endpoint used by NEST dashboard
+// ═══════════════════════════════════════════════════════
+async function fetchEventPropLines(eventId) {
+  const base = `${CORE_API}/events/${eventId}/competitions/${eventId}/odds/100/propBets`;
+  try {
+    const first = await espnFetch(`${base}?lang=en&region=us&limit=100`);
+    const pageCount = first.pageCount || 1;
+    let items = first.items || [];
+
+    if (pageCount > 1) {
+      const pages = Array.from({ length: pageCount - 1 }, (_, i) => i + 2);
+      const rest = await Promise.all(
+        pages.map(p => espnFetch(`${base}?lang=en&region=us&limit=100&page=${p}`).catch(() => ({ items: [] })))
+      );
+      rest.forEach(r => { items = items.concat(r.items || []); });
+    }
+
+    for (const item of items) {
+      const athId = athleteIdFromRef(item.athlete?.$ref);
+      if (!athId) continue;
+      const typeName = (item.type?.name || '').toLowerCase();
+      const stat = PROP_TYPE_MAP[typeName];
+      if (!stat) continue;
+      const line = item.current?.target?.value;
+      if (line == null) continue;
+      if (!PROP_LINES[athId]) PROP_LINES[athId] = {};
+      // Keep first occurrence (Over comes before Under, same value)
+      if (PROP_LINES[athId][stat] == null) {
+        PROP_LINES[athId][stat] = parseFloat(line);
+      }
+    }
+  } catch (e) {
+    console.warn('propBets fetch failed for event', eventId, e.message);
+  }
+}
+
+async function fetchAllPropLines(events) {
+  PROP_LINES = {};
+  await Promise.all(events.map(ev => fetchEventPropLines(ev.id)));
+  const total = Object.keys(PROP_LINES).length;
+  console.log(`DK prop lines loaded for ${total} players`);
+  return total;
+}
+
+// Boot
+renderFAQ();
+init();
+</script>
+</body>
+</html>
